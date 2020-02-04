@@ -1,9 +1,9 @@
 Package: ssemQr
-Title: Sparse Structural Equation Models to Infer Gene Regulatory Network and eQTL mapping
+Title: Sparse Structural Equation Models based eQTL mapping and Gene Regulatory Network (GRN) inference
 Version: 0.1.0
 Author: Xin Zhou, Xiaodong Cai
 Maintainer: Xin Zhou <xxz220@miami.edu>
-Description: An optimizer of Sparse Structural Equation Model based eQTL mapping, which is designed to identify trans-eQTLs via joint eQTL mapping and infer Gene Regulatory Network(GRN). Proposed by Xin Zhou and Xiaodong Cai. 
+Description: An optimizer of Sparse Structural Equation Model based eQTL mapping, which is specially designed to identify mediated trans-eQTLs via joint eQTL mapping and infer Gene Regulatory Network(GRN). Proposed by Xin Zhou and Xiaodong Cai. 
 License: GPL (>=3)
 Encoding: UTF-8
 LazyData: true

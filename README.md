@@ -24,4 +24,5 @@ install.packages("ssemQr")
 ```
 
 ## Vignette
+[ssemQr-introduction](https://github.com/Ivis4ml/fssemR/blob/master/inst/doc/ssemQr.pdf)
 

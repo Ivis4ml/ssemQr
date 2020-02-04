@@ -1,0 +1,154 @@
+---
+title: "ssemQr: Sparse Structural Equation Models based eQTL mapping"
+author: "Xin Zhou"
+date: "`r Sys.Date()`"
+output: pdf_document
+vignette: >
+  %\VignetteIndexEntry{fssemR-introduction}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = ">"
+)
+```
+
+In this vignette, we introduce the functionality of the `ssemQr` package to jointly implement eQTL-mapping and gene regulatory network (GRN) inference by gene expression and genetic perturbation data. To meet the space and time constraints in building this vignette within the `ssemQr` package, we are going to simulate gene expression and genetic perturbation data instead of using a real dataset. For this purpose, we will use function `randomeQTLdata` in `ssemQr` to generate simulated data, and then apply Sparse Structural Equation Models based eQTL mapping (SSEMQ) to estimate the GRNs under two different conditions and their differential GRN. Also, please go to `https://github.com/Ivis4ml/ssemQr/tree/master/inst` for more large dataset analysis. In conlcusion, this vignette is composed by three sections as follow,
+
+- Simulating GRN and it corresponding cis-eQTL effects, effects of trans-eQTLs are mediated via gene-gene interaction of GRN.
+- Estimating GRNs and cis-eQTL effect from the simulated gene expression data and genetic perturbation data
+- Visualization
+
+For user using package `ssemQr`, please cite the following article:
+
+Xin Zhou and Xiaodong Cai. Identification of trans-eQTLs via Joint eQTL mapping and inference of Gene Regultory Network Bioinformatics, submitted.
+
+## Simulating GRN and it corresponding cis-eQTL effects (Acyclic example) 
+We are going to simulate a GRN and its corresponding gene expression and genetic perturbation data in the following steps:
+
+1. Load the necessary packages
+
+```{r}
+library(ssemQr)
+library(network)
+library(ggnetwork)
+library(igraph)
+library(Matrix)
+```
+
+2. Simulate 20 genes expression data with a sparse directed acyclic graph (DAG) GRN. Set {\it cis}-eQTLs ratio as 10% of neighboring SNPs, and 5% genes have no {\it cis}-eQTLs
+
+```{r}
+N  = 100                                                             # sample size
+Ng = 20                                                              # gene number
+Nk = 20 * 3                                                          # eQTL number
+Ns = 15 / Ng                                                         # sparsity of GRN
+sigma2 = 0.01                                                        # sigma2
+Es = 0.1                                                             # sparsity of {\it cis}-eQTL
+set.seed(123)
+data = randomeQTLdata(n = N, p = Ng, k = Nk, sparse =  Ns, sqtl = Es, intercept = 5, sigma2 = sigma2, esize = c(0.5, 5), coefs = c(0.2, 0.6), type = "DG", dag = TRUE, overlap = "none", span = TRUE, noqtl = FALSE, rmv = 0.05)
+```
+
+Based on the mediation mechanism assumption, the eQTL-eGene associations are classified into two categories; cis-eQTLs and trans-eQTLs. The effects of trans-eQTLs are mediated by the GRN, which can be represented as series $\mathbf{B}\mathbf{F} + \mathbf{B}^2\mathbf{F} + ... + \mathbf{B}^n\mathbf{F}$. If $\rho(\mathbf{B}) \leq 1$, the effects of trans-eQTLs can be represented as $(\mathbf{I} - \mathbf{B})^{-1}\mathbf{F} - \mathbf{F}$.
+
+```{r}
+Fw = (solve(diag(Ng) - data$Vars$B) %*% data$Vars$F)
+Ftrans = sum(Fw[data$Vars$F == 0] != 0)
+```
+
++ Finally, `r sum(data$Vars$F != 0)` cis-eQTLs-eGene, `r Ftrans` trans-eQTLs-eGene association simulated.
+
++ Summary of GRN and QTLs
+```{r, fig.align="center", fig.cap="GRN QTL Network"}
+rownames(data$Vars$B) = colnames(data$Vars$B) = rownames(data$Vars$F) = rownames(data$Data$Y)
+colnames(data$Vars$F) = rownames(data$Data$X)
+GE = get.edgelist(graph.adjacency(t(data$Vars$B) != 0))
+QE = which(t(data$Vars$F) != 0, arr.ind = TRUE)
+QE[,2] = rownames(data$Vars$F)[QE[,2]]
+QE[,1] = rownames(QE)
+GRN = network(rbind(GE, QE), matrix.type = "edgelist", directed = TRUE)
+plot(GRN, displaylabels = TRUE, label.cex = 0.5, vertex.col = rep(c(2, 5), times = c(length(unique(QE[,2])), nrow(QE))))
+```
+
+
+## Implementing eQTL-mapping and GRN inference with simulated gene expression data and genetic perturbation data
+
+1. Simulated gene expression
+```{r}
+head(data$Data$Y)
+```
+
+2. Simulated eQTL's genotype
+```{r}
+head(data$Data$X)
+```
+
+3. `data$Data$Sk` stores each genes' nearby SNPs' indices, which is the candidate pool of cis-eQTL mapping filtered by distance constraint
+```{r}
+head(data$Data$Sk)
+```
+
+### Initialization of `ssemQr` by ridge regression
+We implement our ssemQr by the observed gene expression data and genetic perturbations data that stored in `data$Data`, and it is initialized by ridge regression, the $l_2$ norm penalty's hyperparameter $\gamma$ is selected by 10-fold cross-validation.
+
+```{r}
+X     = data$Data$X
+Y     = data$Data$Y
+Sk    = data$Data$Sk
+gamma = cv.ridgeRegression(X, Y, Sk, ngamma = 100, nfold = 10, data$Vars$n, data$Vars$p, data$Vars$q)
+fit0   = ridgeRegression(X, Y, Sk, gamma, data$Vars$n, data$Vars$p, data$Vars$q, trans = FALSE, sparse = FALSE)
+```
+
+
+### Run ssemQr algorithm for data
+Then, we chose the `fit0` object from ridge regression as intialization, and implement the `ssemQr` algorithm, BIC is used to select optimal hyperparameters $\lambda, \rho$, where `nlambda` is the number of candidate lambda values for $l_1$ regularized term, and `nrho` is the number of candidate rho values for fused lasso regularized term.
+
+```{r}
+fitOpt = opt.SSEMiPALM(X = X, Y = Y, B = fit0$B, F = fit0$F, Sk = Sk, sigma2 = fit0$sigma2,
+                       nlambda = 7, nrho = 7, p = data$Vars$p, wt = TRUE)
+fitQtl = SSEMiPALM(X = X, Y = Y, B = fit0$B, F = fit0$F, Sk = Sk, sigma2 = fit0$sigma2,
+                   lambda = fitOpt$lambda, rho = fitOpt$rho,
+                   Wb = 1 / abs(fit0$B), Wf = 1 / abs(fit0$F),
+                   p = data$Vars$p, maxit = 1000, trans = TRUE, strict = TRUE)
+```
+
+### Comparing our estimated cis-QTL and GRN with ground truth
+```{r}
+cat("Power of estimated GRN = ", fssemR:::TPR(fitQtl$B, data$Vars$B))
+cat("FDR of estimated GRN = ", fssemR:::FDR(fitQtl$B, data$Vars$B))
+cat("Power of estimated cis-eQTL =", fssemR:::TPR(fitQtl$F, data$Vars$F))
+cat("FDR of estimated cis-eQTL =", fssemR:::FDR(fitQtl$F, data$Vars$F))
+```
+Based on these 4 metrics, we can get the performance of `ssemQr` in cis-eQTL indentification and GRN estimation.
+
+
+### Comparing estimated trans-eQTL
+```{r, fig.align="center", fig.cap="PR curve of trans-eQTL"}
+Ftrans = (solve(diag(Ng) - fitQtl$B) %*% fitQtl$F)
+Ftrue = (solve(diag(Ng) - data$Vars$B) %*% data$Vars$F)
+PRcurve = calcPR(Ftrans, Ftrue)[-1,]
+ggplot(PRcurve, aes(x = recall, y = precision)) + geom_point(size = 0.5) + geom_path() + labs(x ="Recall", y = "Precision")
+```
+
+
+## Estimated GRN and eQTL visualization
+```{r, fig.align="center", fig.cap="GRN QTL Network"}
+rownames(fitQtl$B) = colnames(fitQtl$B) = rownames(fitQtl$F) = rownames(data$Data$Y)
+colnames(fitQtl$F) = rownames(data$Data$X)
+GE = get.edgelist(graph.adjacency(t(fitQtl$B) != 0))
+QE = which(t(fitQtl$F) != 0, arr.ind = TRUE)
+QE[,2] = rownames(fitQtl$F)[QE[,2]]
+QE[,1] = rownames(QE)
+GRN = network(rbind(GE, QE), matrix.type = "edgelist", directed = TRUE)
+plot(GRN, displaylabels = TRUE, label.cex = 0.5, vertex.col = rep(c(2, 5), times = c(length(unique(QE[,2])), nrow(QE))))
+```
+
+## Session Information
+```{r}
+sessionInfo()
+```
+
+

@@ -25,7 +25,7 @@ ridgeRegression = function(X, Y, Sk, gamma, n, p, k, trans = FALSE, sparse = FAL
     X = t(X)
     Y = t(Y)
   }
-  fit = .Call("L2Regression", X, Y, Sk, gamma, n, p, k, PACKAGE = "SEMQTLR")
+  fit = .Call("L2Regression", X, Y, Sk, gamma, n, p, k, PACKAGE = "ssemQr")
   if (sparse) {
     fit$F = Matrix(fit$F, sparse = T)
   }
@@ -253,7 +253,7 @@ SSEMiPALM = function(X, Y, B, F, Sk, sigma2, lambda, rho, Wb = 1 / abs(B), Wf = 
       Lerr <= threshold
     }
     if (verbose) {
-      cat(sprintf("SSEM:\tniter = %d,\trelerr = %f,\tprevLik = %f, \tlogLik = %f,\tσ2 = %f\n", niter, Berr + Ferr, Lhist, LogLik, sigma2))
+      cat(sprintf("SSEMQ \tniter = %d, \trelerr = %f, \tlogLik = %f\n", niter, Berr + Ferr, LogLik))
     }
     niter = niter + 1
     Bhist = list(Bhist[[2]], B)

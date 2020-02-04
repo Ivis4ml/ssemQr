@@ -10,7 +10,7 @@ obj.ridgeRegression = function(X, Y, fit, trans = F) {
     X = t(X)
     Y = t(Y)
   }
-  error = .Call("ObjL2Regression", X, Y, fit, PACKAGE = "SEMQTLR")
+  error = .Call("ObjL2Regression", X, Y, fit, PACKAGE = "ssemQr")
   error
 }
 
@@ -22,7 +22,7 @@ obj.ridgeRegression = function(X, Y, fit, trans = F) {
 lamax.ridgeRegression = function(X, Y, Sk, n, p, k) {
   X = t(X)
   Y = t(Y)
-  lambda = .Call("L2lamax", X, Y, Sk, n, p, k, PACKAGE = "SEMQTLR")
+  lambda = .Call("L2lamax", X, Y, Sk, n, p, k, PACKAGE = "ssemQr")
   lambda
 }
 
