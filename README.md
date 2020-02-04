@@ -17,7 +17,7 @@ library(devtools)
 install_github("Ivis4ml/ssemQr")
 ```
 
-Now, `ssemQr` package is uploaded on CRAN. So you will install it via CRAN
+`ssemQr` package will be uploaded on CRAN later. Then you can install it via CRAN
 
 ```r
 install.packages("ssemQr")
