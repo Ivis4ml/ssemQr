@@ -4,8 +4,18 @@
 \alias{ridgeRegression}
 \title{ridgeRegression}
 \usage{
-ridgeRegression(X, Y, Sk, gamma, n, p, k, trans = FALSE,
-  sparse = FALSE)
+ridgeRegression(
+  X,
+  Y,
+  Sk,
+  gamma,
+  lambda,
+  n,
+  p,
+  k,
+  trans = FALSE,
+  sparse = FALSE
+)
 }
 \arguments{
 \item{X}{eQTL matrix.}

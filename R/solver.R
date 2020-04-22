@@ -20,12 +20,12 @@
 ##' @export
 ##' @importFrom stats rbinom rnorm runif sd
 ##' @importFrom Matrix Matrix
-ridgeRegression = function(X, Y, Sk, gamma, n, p, k, trans = FALSE, sparse = FALSE) {
+ridgeRegression = function(X, Y, Sk, gamma, lambda, n, p, k, trans = FALSE, sparse = FALSE) {
   if (!trans) {
     X = t(X)
     Y = t(Y)
   }
-  fit = .Call("L2Regression", X, Y, Sk, gamma, n, p, k, PACKAGE = "ssemQr")
+  fit = .Call("L2Regression", X, Y, Sk, gamma, lambda, n, p, k, PACKAGE = "ssemQr")
   if (sparse) {
     fit$F = Matrix(fit$F, sparse = T)
   }
@@ -48,7 +48,7 @@ ridgeRegression = function(X, Y, Sk, gamma, n, p, k, trans = FALSE, sparse = FAL
 ##' @examples
 ##' gamma = cv.ridgeRegression(data$Data$X, data$Data$Y, data$Data$Sk, ngamma = 20, nfold = 5, 100, 10, 60)
 cv.ridgeRegression = function(X, Y, Sk, ngamma = 20, nfold = 5, n, p, k) {
-  cverr.mat = matrix(0, nrow = ngamma, ncol = nfold)
+  cverr.mat = matrix(0, nrow = ngamma * ngamma, ncol = nfold)
   cvfold    = sample(seq(1, nfold), size = n, replace = T)
   gamma_max = lamax.ridgeRegression(X, Y, Sk, n, p, k)
   gamma_factors = 10 ** (seq(0, -6, length.out = ngamma)) * gamma_max
@@ -63,18 +63,22 @@ cv.ridgeRegression = function(X, Y, Sk, ngamma = 20, nfold = 5, n, p, k) {
     Ytest[[i]]  = Y[, cvfold == i, drop = F]
   }
   igamma = 1
+  params = NULL
   for (gamma in gamma_factors) {
-    for (i in 1:nfold) {
-      ntrain = sum(cvfold != i)
-      ntest  = sum(cvfold == i)
-      fit = ridgeRegression(Xtrain[[i]], Ytrain[[i]], Sk, gamma, ntrain, p, k, trans = F)
-      cverr.mat[igamma, i] = obj.ridgeRegression(Xtest[[i]], Ytest[[i]], fit) / ntest
+    for (lambda in gamma_factors) {
+      for (i in 1:nfold) {
+        ntrain = sum(cvfold != i)
+        ntest  = sum(cvfold == i)
+        fit = ridgeRegression(Xtrain[[i]], Ytrain[[i]], Sk, gamma, lambda, ntrain, p, k, trans = F)
+        cverr.mat[igamma, i] = obj.ridgeRegression(Xtest[[i]], Ytest[[i]], fit) / ntest
+      }
+      igamma = igamma + 1
+      params = rbind(params, c(gamma, lambda))
     }
-    igamma = igamma + 1
   }
   cvmean = rowMeans(cverr.mat)
   print(cvmean)
-  gamma.min = gamma_factors[which.min(cvmean)]
+  gamma.min = params[which.min(cvmean), ]
   gamma.min
 }
 
@@ -211,10 +215,13 @@ SSEMiPALM = function(X, Y, B, F, Sk, sigma2, lambda, rho, Wb = 1 / abs(B), Wf = 
         wi = Wb[-i, i]
         xi = proxLasso(ui, wi, lambda, gamma * li)
         Det_update = invImB[i, i] - tcrossprod(xi, invImB[i, -i])[1]
-        if (Det_update != 0) {
+        if (is.nan(Det_update)) {
+          gamma = 1
+        } else if (Det_update != 0) {
           break
+        } else {
+          gamma = gamma * 1.01
         }
-        gamma = gamma * 1.01
       }
       ## Covariates update
       B[-i, i] = xi
@@ -271,6 +278,7 @@ SSEMiPALM = function(X, Y, B, F, Sk, sigma2, lambda, rho, Wb = 1 / abs(B), Wf = 
   if (sparse) {
     B = Matrix(B, sparse = T)
     F = Matrix(F, sparse = T)
+    B[abs(B) < 1e-3] = 0
   }
   list(B = B, F = F, mu = mu, sigma2 = sigma2, Det = Det, trans = TRUE)
 }
@@ -288,8 +296,6 @@ initLambdaSSEM2F = function(X, Y, Sk, Wb, Wf, p, q) {
   centered = proc.centerSSEM(X, Y)
   X  = centered[["X"]]            # k x n
   Y  = centered[["Y"]]            # p x n
-  mX = centered[["mX"]]
-  mY = centered[["mY"]]
   n  = ncol(Y)
   B0 = matrix(0, nrow = p, ncol = p)
   F0 = matrix(0, nrow = p, ncol = q)
@@ -314,7 +320,8 @@ initLambdaSSEM2B = function(X, Y, fit, Wb) {
   centered = proc.centerSSEM(X, Y)
   X  = centered[["X"]]            # k x n
   Y  = centered[["Y"]]            # p x n
-  max(abs(1 / fit$sigma2 * (tcrossprod(Y) - fit$F %*% tcrossprod(X, Y)) / Wb))
+  n  = ncol(Y)
+  max(abs(-n + 1 / fit$sigma2 * (tcrossprod(Y) - fit$F %*% tcrossprod(X, Y))) / Wb)
 }
 
 ##' Optimized Sparse SEM by BIC
@@ -362,6 +369,8 @@ opt.SSEMiPALM = function(X, Y, B, F, Sk, sigma2, Wb = NULL, Wf = NULL, nlambda =
                          p = p, maxit = 200, threshold = 1e-4, trans = TRUE, strict = FALSE, verbose = FALSE)
         cat(sprintf("SSEM@lambda = %4f, rho = %4f\n", lambda_factors[ilambda], rho))
       }
+      fit[[j]]$B[abs(fit[[j]]$B) < 1e-3] = 0
+      fit[[j]]$F[abs(fit[[j]]$F) < 1e-3] = 0
       err = bayesianInfocriterion(X, Y, fit[[j]]$B, fit[[j]]$F, fit[[j]]$mu, fit[[j]]$Det, fit[[j]]$sigma2, p, c)
       params[[j]] = c(lambda_factors[ilambda], rho, err)
       j = j + 1
@@ -481,10 +490,13 @@ SSEMeNet = function(X, Y, B, F, Sk, sigma2, lambda, alpha, rho, Wb = 1 / abs(B),
         wi = Wb[-i, i]
         xi = proxLasso(ui, wi, lambda, gamma * li)
         Det_update = invImB[i, i] - tcrossprod(xi, invImB[i, -i])[1]
-        if (Det_update != 0) {
+        if (is.nan(Det_update)) {
+          gamma = 1;
+        } else if (Det_update != 0) {
           break
+        } else {
+          gamma = gamma * 1.02
         }
-        gamma = gamma * 1.02
       }
       ## Covariates update
       B[-i, i] = xi
@@ -608,4 +620,103 @@ opt.SSEMeNet = function(X, Y, B, F, Sk, sigma2, Wb = NULL, Wf = NULL, nlambda = 
        fit = fit[[BICmin]], minBIC = min(BICmat$BIC), BICs = BICmat)
 }
 
+
+## cross-validation on ridge regression via glmnet
+##' @title cv.ridgeRegression2
+##' @param X      eQTL matrix
+##' @param Y      Gene expression matrix
+##' @param Sk      eQTL index of genes
+##' @param ngamma  number of hyper-parameter in CV
+##' @param nfold   CVfold number. Default 5/10
+##' @param n       number of observations
+##' @param p       number of genes
+##' @param k       number of eQTLs
+##' @return gamma_min optimal gamma to minimize cross-validation error
+##' @export
+##' @examples
+##' gamma = cv.ridgeRegression2(data$Data$X, data$Data$Y, data$Data$Sk, ngamma = 20, nfold = 5, 100, 10, 60)
+cv.ridgeRegression2 = function(X, Y, Sk, ngamma = 100, nfold = 5, n, p, k) {
+  fit = list(B = Matrix(0, nrow = p, ncol = p), f = list(), F = Matrix(0, nrow = p, ncol = p, sparse = TRUE), mu = NULL)
+  for(i in 1:n) {
+    cat("Processing gene", i, " ...")
+    y = Y[i,]
+    x = rbind(Y[-i, ], X[Sk[[i]], ])
+    cv = cv.glmnet(x, y, alpha = 0, nlambda = 100)
+    f = glmnet(x, y, alpha = 0, lambda = cv$lambda.min)
+    fit$B[i, -i] = f$beta[1:(p - 1)]
+    fit$f[[i]] = tail(f$beta, length(Sk[[i]]))
+    fit$F[Sk[[i]], i] = fit$f[[i]]
+    fit$mu = rbind(fit$mu, f$a0)
+  }
+  fit$sigma2 = sigma2SSEM(X, Y, fit$B, fit$F, n, p)
+  fit
+}
+
+
+
+## Stability Selection with optimized lambda and rho
+##' @title StabilitySelectionSSEMQ
+##' @param X  eQTL matrix
+##' @param Y  Gene expression matrix
+##' @param B  initialized GRN-matrix
+##' @param F  initialized eQTL effect matrix
+##' @param Sk  eQTL index of genes
+##' @param sigma2 initialized noise variance from ridge regression
+##' @param lambda Optimized selected hyperparameter of lasso term in SSEM for B from opt.SSEMiPALM
+##' @param rho    Optimized selected Hyperparameter of lasso term in SSEM for F from opt.SSEMiPALM
+##' @param Wb weight matrix of B for adaptive lasso terms. Default as 1 / B(init) from eidge regression.
+##' @param Wf weight matrix of F for adaptive lasso terms. Default as 1 / F(init) from ridge regression.
+##' @param p  number of genes
+##' @param R  number of replicates in bootstrap of stability selection
+##' @param threshold threshold of estimates
+##' @export
+##' @importFrom stabs subsample
+##' @return list Matrices for B, F, (I-B)^{-1}F, entries with probability of nonzeros within R replicates
+StabilitySelectionSSEMQ = function(X, Y, B, F, Sk, sigma2, lambda, rho, Wb, Wf, p, R = 100, threshold = 1e-4) {
+  ## sample propertion 1/2 to be used
+  bootstrapS = subsample(rep(1, ncol(X)), B = R)
+  fitS = list()
+  upper = 1    # subsample for +1/2
+  lower = 0    # subsample for -1/2
+  j = 1
+  for (i in 1:R) {
+    fold = bootstrapS[, i]
+    for (k in c(upper, lower)) {
+      ix = which(fold == k)
+      f = SSEMiPALM(
+        X = X[, ix, drop = FALSE],
+        Y = Y[, ix, drop = FALSE],
+        B = B,
+        F = F,
+        Sk = Sk,
+        sigma2 = sigma2,
+        lambda = lambda,
+        rho = rho,
+        Wb = Wb,
+        Wf = Wf,
+        p = p,
+        maxit = 200,
+        trans = TRUE,
+        strict = FALSE,
+        threshold = 1e-6
+      )
+      fitS[[j]] = f
+      j = j + 1
+    }
+  }
+  q = nrow(Y)
+  Bss = Matrix(0, nrow = p, ncol = p)
+  Fss = Matrix(0, nrow = p, ncol = q)
+  Tss = Matrix(0, nrow = p, ncol = q)
+  for (f in fitS) {
+    Bss = (abs(f$B) >= threshold) + Bss
+    Fss = (abs(f$F) >= threshold) + Fss
+    trans = solve(diag(p) - f$B) %*% f$F
+    Tss = (abs(trans) >= threshold) + Tss
+  }
+  Bss = Bss / (2 * R)
+  Fss = Fss / (2 * R)
+  Tss = Tss / (2 * R)
+  list(B = Bss, F = Fss, T = Tss)
+}
 

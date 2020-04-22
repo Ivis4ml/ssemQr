@@ -3,8 +3,7 @@
 \docType{package}
 \name{ssemQr}
 \alias{ssemQr}
-\alias{package-SEMQTLR}
-\alias{ssemQr-package}
+\alias{package-ssemQr}
 \title{Solving Sparse Structural Equation Model}
 \description{
 Solving Sparse Structural Equation Model

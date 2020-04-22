@@ -4,9 +4,21 @@
 \alias{randQtlsdata}
 \title{randQtlsdata}
 \usage{
-randQtlsdata(n, p, k, sparse = 1, s = 3, sigma2 = 0.01,
-  intercept = 5, type = c("DG", "ER"), dag = TRUE, coefs = c(0.2,
-  0.4), esize = c(0.5, 1), qdist = 100, ncore = 0.1)
+randQtlsdata(
+  n,
+  p,
+  k,
+  sparse = 1,
+  s = 3,
+  sigma2 = 0.01,
+  intercept = 5,
+  type = c("DG", "ER"),
+  dag = TRUE,
+  coefs = c(0.2, 0.4),
+  esize = c(0.5, 1),
+  qdist = 100,
+  ncore = 0.1
+)
 }
 \arguments{
 \item{n}{number of observations}

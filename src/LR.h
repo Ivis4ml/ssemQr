@@ -4,9 +4,9 @@
 #include "MatOp.h"
 
 template<class MatType>
-inline MatType LR_Shrink(MatType& Xi, MatType& Yi, MatType& yi, const double gamma, const int n, const int p, const int k) {
+inline MatType LR_Shrink(MatType& Xi, MatType& Yi, MatType& yi, const double gamma, const double lambda, const int n, const int p, const int k) {
   MatType H = Xi.transpose() * Xi;
-  H.diagonal().array() += gamma;
+  H.diagonal().array() += lambda;
   Eigen::FullPivLU<MatType> CH(H);
   MatType Pi  = MatType::Identity(n, n) - Xi * CH.solve(Xi.transpose());
   MatType I = Yi.transpose() * Pi * Yi;
@@ -26,9 +26,9 @@ inline double LR_Trace(MatType& Xi, MatType& Yi, MatType& yi) {
 
 
 template<class MatType>
-inline MatType LR_Fi(MatType& Xi, MatType& Yi, MatType& yi, MatType& bi, const double gamma) {
+inline MatType LR_Fi(MatType& Xi, MatType& Yi, MatType& yi, MatType& bi, const double lambda) {
   MatType H = Xi.transpose() * Xi;
-  H.diagonal().array() += gamma;
+  H.diagonal().array() += lambda;
   Eigen::FullPivLU<MatType> XX(H);
   MatType fi = XX.solve(Xi.transpose() * (yi - Yi * bi));
   return fi;
@@ -45,7 +45,7 @@ inline double LR_Objerr(MatType& X, MatType& Y, MatType& B, MatType& F, MatType&
 }
 
 template<class MatType, class VecType, class IdxType>
-inline double L2lr(MatType& X, MatType& Y, IdxType& S, MatType& B, VecType& fi, MatType& mu, const double gamma, const int n, const int p, const int k) {
+inline double L2lr(MatType& X, MatType& Y, IdxType& S, MatType& B, VecType& fi, MatType& mu, const double gamma, const double lambda, const int n, const int p, const int k) {
   MatrixXf xm, ym;
   center(X, xm);
   center(Y, ym);
@@ -60,9 +60,9 @@ inline double L2lr(MatType& X, MatType& Y, IdxType& S, MatType& B, VecType& fi, 
     Xi = get_Cols(X, S[i-1]);
     Yi = rm_Col(Y, i);
     yi = Y.col(i-1);
-    bi = LR_Shrink(Xi, Yi, yi, gamma, n, p, k);
+    bi = LR_Shrink(Xi, Yi, yi, gamma, lambda, n, p, k);
     set_Row(B, i, bi);
-    fi[i-1] = LR_Fi(Xi, Yi, yi, bi, gamma);
+    fi[i-1] = LR_Fi(Xi, Yi, yi, bi, lambda);
     error += (yi - Yi * bi - Xi * fi[i-1]).squaredNorm();
   }
   mu  = (MatrixXf::Identity(p, p) - B) * ym;

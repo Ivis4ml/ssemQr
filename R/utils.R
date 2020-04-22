@@ -172,10 +172,9 @@ bayesianInfocriterion = function(X, Y, B, F, mu, Det, sigma2, p, c) {
   err  = norm(Y - B %*% Y - F %*% X - tcrossprod(mu, rep(1, n)), "f")**2
   logl = -n/2*log(Det**2) + n * p / 2 * log(sigma2) + err / 2 / sigma2
   df   = sum(B != 0) + sum(F != 0) + 1
-  if (n <= p) {
-    # kappa = 0
-    # 2 * logl + 6 * (1 + kappa) * df * log(n)  ## CL-BIC
-    2 * logl + df * log(n)
+  if (q > n & p > n) { # high dimensional case
+    kappa = 0
+    2 * logl + 6 * (1 + kappa) * df * log(n)  ## CL-BIC
   } else {
     2 * logl + df * log(n)
   }
@@ -243,4 +242,74 @@ calcPR = function(X, B, by = 5 * 1e-4) {
   colnames(PR) = c("recall", "precision")
   as.data.frame(PR)
 }
+
+
+##' Download GTeX borrow from Yarn
+##' @title downloadGTEx
+##' @return ExpressionSet set
+##' @export
+##' @examples
+##' # obj <- downloadGTExv6p(type = 'genes', file = '/media/xinchou/Storage/gtexv6p.rds')
+downloadGTExv6p = function (type = "genes", file = NULL, ...)
+{
+  phenoFile <- "https://storage.googleapis.com/gtex_analysis_v6p/annotations/GTEx_Data_V6_Annotations_SampleAttributesDS.txt"
+  pheno2File <- "https://storage.googleapis.com/gtex_analysis_v6p/annotations/GTEx_Data_V6_Annotations_SubjectPhenotypesDS.txt"
+  geneFile <- "https://storage.googleapis.com/gtex_analysis_v6p/rna_seq_data/GTEx_Analysis_v6p_RNA-seq_RNA-SeQCv1.1.8_gene_reads.gct.gz"
+  message("Downloading and reading files")
+  pdFile <- tempfile("phenodat", fileext = ".txt")
+  downloader::download(phenoFile, destfile = pdFile)
+  pd <- readr::read_tsv(pdFile)
+  pd <- as.matrix(pd)
+  rownames(pd) <- pd[, "SAMPID"]
+  ids <- sapply(strsplit(pd[, "SAMPID"], "-"), function(i) paste(i[1:2],
+                                                                 collapse = "-"))
+  pd2File <- tempfile("phenodat2", fileext = ".txt")
+  downloader::download(pheno2File, destfile = pd2File)
+  pd2 <- readr::read_tsv(pd2File)
+  pd2 <- as.matrix(pd2)
+  rownames(pd2) <- pd2[, "SUBJID"]
+  pd2 <- pd2[which(rownames(pd2) %in% unique(ids)), ]
+  pd2 <- pd2[match(ids, rownames(pd2)), ]
+  rownames(pd2) <- colnames(counts)
+  pdfinal <- Biobase::AnnotatedDataFrame(data.frame(cbind(pd, pd2)))
+  if (type == "genes") {
+    countsFile <- tempfile("counts", fileext = ".gz")
+    downloader::download(geneFile, destfile = countsFile)
+    cnts <- suppressWarnings(readr::read_tsv(geneFile, skip = 2))
+    genes <- unlist(cnts[, 1])
+    geneNames <- unlist(cnts[, 2])
+    counts <- cnts[, -c(1:2)]
+    counts <- as.matrix(counts)
+    rownames(counts) <- genes
+    for (i in 1:nrow(readr::problems(cnts))) {
+      counts[readr::problems(cnts)$row[i], readr::problems(cnts)$col[i]] <- 1e+05
+    }
+    throwAway <- which(rowSums(counts) == 0)
+    counts <- counts[-throwAway, ]
+    genes <- sub("\\..*", "", rownames(counts))
+    host <- "dec2013.archive.ensembl.org"
+    biomart <- "ENSEMBL_MART_ENSEMBL"
+    dataset <- "hsapiens_gene_ensembl"
+    attributes <- c("ensembl_gene_id", "hgnc_symbol", "chromosome_name",
+                    "start_position", "end_position", "gene_biotype")
+  }
+  message("Creating ExpressionSet")
+  pdfinal <- pdfinal[match(colnames(counts), rownames(pdfinal)),
+                     ]
+  es <- Biobase::ExpressionSet(as.matrix(counts))
+  Biobase::phenoData(es) <- pdfinal
+  pData(es)["GTEX-YF7O-2326-101833-SM-5CVN9", "SMTS"] <- "Skin"
+  pData(es)["GTEX-YEC3-1426-101806-SM-5PNXX", "SMTS"] <- "Stomach"
+  #message("Annotating from biomaRt")
+  #es <- yarn::annotateFromBiomart(obj = es, genes = genes, host = host,
+  #                          biomart = biomart, dataset = dataset, attributes = attributes)
+  message("Cleaning up files")
+  unlink(pdFile)
+  unlink(pd2File)
+  unlink(countsFile)
+  if (!is.null(file))
+    saveRDS(es, file = file)
+  return(es)
+}
+
 

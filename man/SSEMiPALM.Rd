@@ -4,10 +4,27 @@
 \alias{SSEMiPALM}
 \title{SSEMiPALM}
 \usage{
-SSEMiPALM(X, Y, B, F, Sk, sigma2, lambda, rho, Wb = 1/abs(B),
-  Wf = 1/abs(F), p, maxit = 100, inert = inert_opt("linear"),
-  threshold = 1e-06, verbose = TRUE, sparse = TRUE, trans = FALSE,
-  B2norm = NULL, strict = FALSE)
+SSEMiPALM(
+  X,
+  Y,
+  B,
+  F,
+  Sk,
+  sigma2,
+  lambda,
+  rho,
+  Wb = 1/abs(B),
+  Wf = 1/abs(F),
+  p,
+  maxit = 100,
+  inert = inert_opt("linear"),
+  threshold = 1e-06,
+  verbose = TRUE,
+  sparse = TRUE,
+  trans = FALSE,
+  B2norm = NULL,
+  strict = FALSE
+)
 }
 \arguments{
 \item{X}{eQTL matrix}

@@ -4,8 +4,21 @@
 \alias{opt.SSEMeNet}
 \title{opt.SSEMeNet}
 \usage{
-opt.SSEMeNet(X, Y, B, F, Sk, sigma2, Wb = NULL, Wf = NULL,
-  nlambda = 20, nalpha = 5, nrho = 20, p, wt = TRUE)
+opt.SSEMeNet(
+  X,
+  Y,
+  B,
+  F,
+  Sk,
+  sigma2,
+  Wb = NULL,
+  Wf = NULL,
+  nlambda = 20,
+  nalpha = 5,
+  nrho = 20,
+  p,
+  wt = TRUE
+)
 }
 \arguments{
 \item{X}{eQTL matrix}

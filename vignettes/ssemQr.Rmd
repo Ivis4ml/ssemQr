@@ -24,7 +24,8 @@ In this vignette, we introduce the functionality of the `ssemQr` package to join
 
 For user using package `ssemQr`, please cite the following article:
 
-Xin Zhou and Xiaodong Cai. Identification of trans-eQTLs via Joint eQTL mapping and inference of Gene Regultory Network Bioinformatics, submitted.
+Xin Zhou and Xiaodong Cai. Joint eQTL mapping and Inference of Gene Regulatory Network Improves Power of Detecting both cis- and
+trans-eQTLs, Bioinformatics, submitted.
 
 ## Simulating GRN and it corresponding cis-eQTL effects (Acyclic example) 
 We are going to simulate a GRN and its corresponding gene expression and genetic perturbation data in the following steps:
@@ -98,8 +99,8 @@ We implement our ssemQr by the observed gene expression data and genetic perturb
 X     = data$Data$X
 Y     = data$Data$Y
 Sk    = data$Data$Sk
-gamma = cv.ridgeRegression(X, Y, Sk, ngamma = 100, nfold = 10, data$Vars$n, data$Vars$p, data$Vars$q)
-fit0   = ridgeRegression(X, Y, Sk, gamma, data$Vars$n, data$Vars$p, data$Vars$q, trans = FALSE, sparse = FALSE)
+gamma = cv.ridgeRegression(X, Y, Sk, ngamma = 10, nfold = 10, data$Vars$n, data$Vars$p, data$Vars$q)
+fit0   = ridgeRegression(X, Y, Sk, gamma[1], gamma[2], data$Vars$n, data$Vars$p, data$Vars$q, trans = FALSE, sparse = FALSE)
 ```
 
 
@@ -108,7 +109,7 @@ Then, we chose the `fit0` object from ridge regression as intialization, and imp
 
 ```{r}
 fitOpt = opt.SSEMiPALM(X = X, Y = Y, B = fit0$B, F = fit0$F, Sk = Sk, sigma2 = fit0$sigma2,
-                       nlambda = 7, nrho = 7, p = data$Vars$p, wt = TRUE)
+                       nlambda = 10, nrho = 10, p = data$Vars$p, wt = TRUE)
 fitQtl = SSEMiPALM(X = X, Y = Y, B = fit0$B, F = fit0$F, Sk = Sk, sigma2 = fit0$sigma2,
                    lambda = fitOpt$lambda, rho = fitOpt$rho,
                    Wb = 1 / abs(fit0$B), Wf = 1 / abs(fit0$F),

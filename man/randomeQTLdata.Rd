@@ -4,11 +4,25 @@
 \alias{randomeQTLdata}
 \title{randomeQTLdata}
 \usage{
-randomeQTLdata(n, p, k, sparse = 1, sqtl = 0.5, sigma2 = 0.01,
-  intercept = 5, type = c("DG", "ER"), dag = TRUE, coefs = c(0.2,
-  0.4), esize = c(0.5, 1), overlap = c("none", "weak", "strong"),
-  qdist = 100, ncore = 0.1, span = FALSE, noqtl = FALSE,
-  rmv = 0.1)
+randomeQTLdata(
+  n,
+  p,
+  k,
+  sparse = 1,
+  sqtl = 0.5,
+  sigma2 = 0.01,
+  intercept = 5,
+  type = c("DG", "ER"),
+  dag = TRUE,
+  coefs = c(0.2, 0.4),
+  esize = c(0.5, 1),
+  overlap = c("none", "weak", "strong"),
+  qdist = 100,
+  ncore = 0.1,
+  span = FALSE,
+  noqtl = FALSE,
+  rmv = 0.1
+)
 }
 \arguments{
 \item{n}{number of observations}

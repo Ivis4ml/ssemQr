@@ -4,8 +4,20 @@
 \alias{opt.SSEMiPALM}
 \title{opt.SSEMiPALM}
 \usage{
-opt.SSEMiPALM(X, Y, B, F, Sk, sigma2, Wb = NULL, Wf = NULL,
-  nlambda = 20, nrho = 20, p, wt = TRUE)
+opt.SSEMiPALM(
+  X,
+  Y,
+  B,
+  F,
+  Sk,
+  sigma2,
+  Wb = NULL,
+  Wf = NULL,
+  nlambda = 20,
+  nrho = 20,
+  p,
+  wt = TRUE
+)
 }
 \arguments{
 \item{X}{eQTL matrix}
