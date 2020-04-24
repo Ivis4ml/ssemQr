@@ -26,3 +26,8 @@ install.packages("ssemQr")
 ## Vignette
 [ssemQr-introduction](https://github.com/Ivis4ml/ssemQr/blob/master/inst/doc/ssemQr.pdf)
 
+
+## Citation
+Joint eQTL mapping and Inference of Gene Regulatory Network Improves Power of Detecting both cis- and trans-eQTLs
+Xin Zhou, Xiaodong Cai, bioRxiv 2020.04.23.058735; doi: https://doi.org/10.1101/2020.04.23.058735
+
