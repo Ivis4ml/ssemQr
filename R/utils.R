@@ -312,4 +312,11 @@ downloadGTExv6p = function (type = "genes", file = NULL, ...)
   return(es)
 }
 
+#' Genotype of Human Sapiens from GTEx
+#'
+#' A dataset containing Genotype of SNPs for different genes
+#'
+#' @format 5 candidate genotype pool extracted from GTEx patients
+'G'
+
 
