@@ -29,3 +29,7 @@ install.packages("ssemQr")
 
 ## Citation
 Xin Zhou, Xiaodong Cai, Joint eQTL mapping and inference of gene regulatory network improves power of detecting both cis- and trans-eQTLs, Bioinformatics, Volume 38, Issue 1, 1 January 2022, Pages 149–156, https://doi.org/10.1093/bioinformatics/btab609
+
+
+## Acknowledgement
+Special thanks must go to Yilun Zhang <3100105044@zju.edu.cn> for his contribution to the numerical optimization for the code and mathematical parts of the research.
