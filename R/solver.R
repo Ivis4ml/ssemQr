@@ -25,7 +25,7 @@ ridgeRegression = function(X, Y, Sk, gamma, lambda, n, p, k, trans = FALSE, spar
     X = t(X)
     Y = t(Y)
   }
-  fit = .Call("L2Regression", X, Y, Sk, gamma, lambda, n, p, k, PACKAGE = "ssemQr")
+  fit = L2Regression(X, Y, Sk, gamma, lambda, n, p, k)
   if (sparse) {
     fit$F = Matrix(fit$F, sparse = T)
   }
@@ -357,16 +357,16 @@ opt.SSEMiPALM = function(X, Y, B, F, Sk, sigma2, Wb = NULL, Wf = NULL, nlambda =
     for (ilambda in 1:nlambda) {
       if (ilambda == 1) {
         fit[[j]] = SSEMiPALM(X = X, Y = Y, B = B, F = F, Sk = Sk, sigma2 = sigma2,
-                         lambda = Inf, rho = rho, Wb = Wb, Wf = Wf, p = p, maxit = 200,
-                         threshold = 1e-4, trans = TRUE, strict = FALSE, verbose = FALSE)
+                             lambda = Inf, rho = rho, Wb = Wb, Wf = Wf, p = p, maxit = 200,
+                             threshold = 1e-4, trans = TRUE, strict = FALSE, verbose = FALSE)
         lambda_max = initLambdaSSEM2B(X, Y, fit[[j]], Wb)
         lambda_factors = 10 ** seq(0, -3, length.out = nlambda) * lambda_max
         cat(sprintf("SSEM@lambda = %4f, rho = %4f\n", lambda_factors[ilambda], rho))
 
       } else {
         fit[[j]] = SSEMiPALM(X = X, Y = Y, B = B, F = F, Sk = Sk, sigma2 = sigma2,
-                         lambda = lambda_factors[ilambda], rho = rho, Wb = Wb, Wf = Wf,
-                         p = p, maxit = 200, threshold = 1e-4, trans = TRUE, strict = FALSE, verbose = FALSE)
+                             lambda = lambda_factors[ilambda], rho = rho, Wb = Wb, Wf = Wf,
+                             p = p, maxit = 200, threshold = 1e-4, trans = TRUE, strict = FALSE, verbose = FALSE)
         cat(sprintf("SSEM@lambda = %4f, rho = %4f\n", lambda_factors[ilambda], rho))
       }
       fit[[j]]$B[abs(fit[[j]]$B) < 1e-3] = 0

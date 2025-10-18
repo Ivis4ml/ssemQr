@@ -10,7 +10,7 @@ obj.ridgeRegression = function(X, Y, fit, trans = F) {
     X = t(X)
     Y = t(Y)
   }
-  error = .Call("ObjL2Regression", X, Y, fit, PACKAGE = "ssemQr")
+  error = ObjL2Regression(X, Y, fit)
   error
 }
 
@@ -22,7 +22,7 @@ obj.ridgeRegression = function(X, Y, fit, trans = F) {
 lamax.ridgeRegression = function(X, Y, Sk, n, p, k) {
   X = t(X)
   Y = t(Y)
-  lambda = .Call("L2lamax", X, Y, Sk, n, p, k, PACKAGE = "ssemQr")
+  lambda = L2lamax(X, Y, Sk, n, p, k)
   lambda
 }
 
@@ -295,7 +295,7 @@ downloadGTExv6p = function (type = "genes", file = NULL, ...)
   }
   message("Creating ExpressionSet")
   pdfinal <- pdfinal[match(colnames(counts), rownames(pdfinal)),
-                     ]
+  ]
   es <- Biobase::ExpressionSet(as.matrix(counts))
   Biobase::phenoData(es) <- pdfinal
   pData(es)["GTEX-YF7O-2326-101833-SM-5CVN9", "SMTS"] <- "Skin"
