@@ -8,9 +8,10 @@ License: GPL (>=3)
 Encoding: UTF-8
 LazyData: true
 Depends: methods
-Imports: Rcpp, Matrix, rARPACK, stats, igraph, mvtnorm, qtl, stringr, glmnet, MASS, lavaan, fssemR
-Suggests: plotly
+Imports: Rcpp, Matrix, rARPACK, stats, igraph, mvtnorm, qtl, stringr, glmnet, MASS, lavaan, fssemR, stabs, plyr
+Suggests: plotly, knitr, rmarkdown, network, ggnetwork, ggplot2
 LinkingTo: Rcpp, RcppEigen
+VignetteBuilder: knitr
 RoxygenNote: 7.0.2
 URL: https://github.com/Ivis4ml/ssemQr
 NeedsCompilation: yes

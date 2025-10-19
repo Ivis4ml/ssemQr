@@ -33,3 +33,5 @@ Xin Zhou, Xiaodong Cai, Joint eQTL mapping and inference of gene regulatory netw
 
 ## Acknowledgement
 Special thanks must go to Yilun Zhang <3100105044@zju.edu.cn> for his contribution to the numerical optimization for the code and mathematical parts of the research.
+
+Special thanks must go to David López Carbonell <davidlc@unizar.es> for his contribution to the his PR[https://github.com/Ivis4ml/ssemQr/pull/3], which is a comprehensive refactoring of the C++ and R interface for L2 regression functions has significantly improved the ssemQr package by upgrading to double-precision arithmetic for better numerical accuracy, modernizing the Rcpp integration with native exports to replace outdated .Call() wrappers, and enhancing overall code quality and maintainability. These improvements not only make the codebase cleaner and more aligned with current best practices, but also ensure the package is more numerically stable and easier to maintain going forward
