@@ -24,7 +24,6 @@ inline double LR_Trace(MatType& Xi, MatType& Yi, MatType& yi) {
   return E.eigenvalues().maxCoeff();
 }
 
-
 template<class MatType>
 inline MatType LR_Fi(MatType& Xi, MatType& Yi, MatType& yi, MatType& bi, const double lambda) {
   MatType H = Xi.transpose() * Xi;
@@ -46,14 +45,14 @@ inline double LR_Objerr(MatType& X, MatType& Y, MatType& B, MatType& F, MatType&
 
 template<class MatType, class VecType, class IdxType>
 inline double L2lr(MatType& X, MatType& Y, IdxType& S, MatType& B, VecType& fi, MatType& mu, const double gamma, const double lambda, const int n, const int p, const int k) {
-  MatrixXf xm, ym;
+  MatType xm, ym;
   center(X, xm);
   center(Y, ym);
-  MatrixXf Xi, Yi, yi, bi, xi;
+  MatType Xi, Yi, yi, bi, xi;
   fi.resize(p);
   double error = 0, sigma2;
 #ifdef _OPENMP
-  #pragma omp parallel for private(Xi, Yi, yi, bi) shared(B, fi) reduction(+:error)
+#pragma omp parallel for private(Xi, Yi, yi, bi) shared(B, fi) reduction(+:error)
 #endif
   for(int i = 1; i <= p; i++)
   {
@@ -65,9 +64,9 @@ inline double L2lr(MatType& X, MatType& Y, IdxType& S, MatType& B, VecType& fi, 
     fi[i-1] = LR_Fi(Xi, Yi, yi, bi, lambda);
     error += (yi - Yi * bi - Xi * fi[i-1]).squaredNorm();
   }
-  mu  = (MatrixXf::Identity(p, p) - B) * ym;
+  mu  = (MatType::Identity(p, p) - B) * ym;
 #ifdef _OPENMP
-  #pragma omp parallel for private(xi) shared(mu)
+#pragma omp parallel for private(xi) shared(mu)
 #endif
   for (int i = 1; i <= p; i++) {
     xi = get_Rows(xm, S[i-1]);
@@ -78,13 +77,13 @@ inline double L2lr(MatType& X, MatType& Y, IdxType& S, MatType& B, VecType& fi, 
 
 template<class MatType, class IdxType>
 inline double L2lamax(MatType& X, MatType& Y, IdxType& S, const int n, const int p, const int k) {
-  MatrixXf xm, ym;
+  MatType xm, ym;
   center(X, xm);
   center(Y, ym);
-  MatrixXf Xi, Yi, yi;
+  MatType Xi, Yi, yi;
   double lambda = 0;
 #ifdef _OPENMP
-  #pragma omp parallel for private(Xi, Yi, yi) reduction(max:lambda)
+#pragma omp parallel for private(Xi, Yi, yi) reduction(max:lambda)
 #endif
   for(int i = 1; i <= p; i++)
   {

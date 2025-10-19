@@ -3,12 +3,14 @@
 
 #include <Eigen/Core>
 #include <RcppEigen.h>
+#include <algorithm>
+#include <vector>
 
 using Eigen::Map;
-using Eigen::MatrixXf;
-using Eigen::VectorXf;
+using Eigen::MatrixXd;
+using Eigen::VectorXd;
 using Eigen::ArrayXd;
-using Eigen::ArrayXf;
+using Eigen::ArrayXi;
 using Eigen::Matrix;
 using Eigen::SelfAdjointEigenSolver;
 using std::max;
@@ -17,8 +19,8 @@ using std::max;
 template<class MatType, class RowIndexType>
 inline MatType get_Rows(const MatType& X, const RowIndexType& ix) {
   MatType Rows(ix.size(), X.cols());
-  for(unsigned int i = 0; i < ix.size(); ++i) {
-    Rows.row(i) = X.row(ix(i) - 1);
+  for (size_t i = 0; i < ix.size(); ++i) {
+    Rows.row(i) = X.row(ix[i] - 1);
   }
   return Rows;
 }
@@ -26,8 +28,8 @@ inline MatType get_Rows(const MatType& X, const RowIndexType& ix) {
 template<class MatType, class ColIndexType>
 inline MatType get_Cols(const MatType& X, const ColIndexType& ix) {
   MatType Cols(X.rows(), ix.size());
-  for(unsigned int i = 0; i < ix.size(); ++i) {
-    Cols.col(i) = X.col(ix(i) - 1);
+  for (size_t i = 0; i < ix.size(); ++i) {
+    Cols.col(i) = X.col(ix[i] - 1);
   }
   return Cols;
 }
@@ -69,8 +71,8 @@ inline MatType rm_Col(const MatType& X, const int ix) {
 template<class VecType, class IndexType>
 inline VecType get_Vec(const VecType& x, const IndexType& ix) {
   VecType vec(ix.size());
-  for(unsigned int i = 0; i < ix.size(); ++i) {
-    vec(i) = x(ix(i) - 1);
+  for(size_t i = 0; i < ix.size(); ++i) {
+    vec(i) = x[ix[i] - 1];
   }
   return vec;
 }
@@ -112,16 +114,15 @@ inline void center(MatType& X, MatType& meanX, bool trans = false) {
   int p = X.cols();
   int n = X.rows();
   meanX.resize(p, 1);
-  float *begin, *end;
+  double *begin, *end;
 #ifdef _OPENMP
-  #pragma omp parallel for private(begin, end) shared(meanX)
+#pragma omp parallel for private(begin, end) shared(meanX)
 #endif
   for(int i = 0; i < p; i++) {
     begin = &X(0, i);
     end   = begin + n;
     meanX(i, 0) = X.col(i).mean();
-    // std::transform(begin, end, begin, std::bind2nd(std::minus<float>(), meanX(i, 0)));
-    std::transform(begin, end, begin, std::bind(std::minus<float>(), std::placeholders::_1, meanX(i, 0)));
+    std::transform(begin, end, begin, std::bind(std::minus<double>(), std::placeholders::_1, meanX(i, 0)));
   }
   if(trans) {
     X.transposeInPlace();
@@ -133,7 +134,7 @@ template<class MatType, class RowIndexType>
 inline void set_Row(MatType& F, const MatType& fi, const RowIndexType& ix, int i) {
   int s = fi.rows();
   for(int j = 0; j < s; j++) {
-    F(ix(j) - 1, i) = fi(j, 0);
+    F(ix[j] - 1, i) = fi(j, 0);
   }
 }
 
@@ -142,7 +143,7 @@ template<class MatType, class ColIndexType>
 inline void set_Col(MatType& F, const MatType& fi, const ColIndexType& ix, int i) {
   int s = fi.rows();
   for(int j = 0; j < s; j++) {
-    F(i, ix(j) - 1) = fi(j, 0);
+    F(i, static_cast<int>(ix[j]) - 1) = fi(j, 0);
   }
 }
 
@@ -152,7 +153,7 @@ inline MatType get_Fs(std::vector<MatType>& fi, VecType S, int k) {
   MatType F(p, k);
   F.setZero();
 #ifdef _OPENMP
-  #pragma omp parallel for shared(F)
+#pragma omp parallel for shared(F)
 #endif
   for(int i = 0; i < p; i++) {
     set_Col(F, fi[i], S[i], i);
